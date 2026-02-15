@@ -301,19 +301,7 @@ async function runLeaderboardTop3AnnouncementTick() {
     [guildId, cycleStartUtc, cycleEndUtc, String(channelId), String(msg.id)]
   );
 
-  
-  // LOGS (append-only)
-  await appendLogEntry({
-    guildId,
-    content: buildLogBlock({
-      tag: "SYSTEM",
-      actorId: null,
-      actorLabel: null,
-      text: `posted Leaderboard cycle Top 3 announcement (cycle_start: ${cycleStartUtc}, cycle_end: ${cycleEndUtc}, message_id: ${String(msg.id)})`,
-    }),
-  });
-
-console.log("[LEADERBOARD_TOP3_ANNOUNCED]", {
+  console.log("[LEADERBOARD_TOP3_ANNOUNCED]", {
     guild_id: guildId,
     cycle_start: cycleStartUtc,
     cycle_end: cycleEndUtc,
@@ -1497,17 +1485,6 @@ async function dbGetOpenRollCallByMessage(guildId, messageId) {
 
 async function dbCloseExpiredRollCalls() {
   const now = nowUtcJsDate();
-
-  // Identify roll calls that are about to be closed (so we can log them)
-  const [toClose] = await pool.query(
-    `
-    SELECT id, guild_id, resolved_channel_id, message_id
-    FROM roll_calls
-    WHERE closed_at IS NULL AND created_at <= (DATE_SUB(?, INTERVAL 1 HOUR))
-  `,
-    [now]
-  );
-
   await pool.query(
     `
     UPDATE roll_calls
@@ -1516,23 +1493,6 @@ async function dbCloseExpiredRollCalls() {
   `,
     [now, now]
   );
-
-  // Append-only logs (best-effort)
-  try {
-    for (const r of toClose ?? []) {
-      await appendLogEntry({
-        guildId: r.guild_id,
-        content: buildLogBlock({
-          tag: "COMMAND",
-          actorId: null,
-          actorLabel: null,
-          text: `closed Roll Call (ID: ${Number(r.id)}, Channel: <#${String(r.resolved_channel_id)}>, message_id: ${String(r.message_id)})`,
-        }),
-      });
-    }
-  } catch (e) {
-    console.error("[LOGS] roll call close logging failed", e);
-  }
 }
 
 async function dbHasRollCallAward(rollCallId, userId) {
@@ -2211,67 +2171,6 @@ async function fetchEnvGuild() {
 }
 
 /* =========================
-   LOGS (APPEND-ONLY)
-========================= */
-function getLogsChannelIdFromGuildConfig() {
-  const envCfg = getEnvConfig();
-  const logsUiRef = envCfg?.channels?.logs ?? null; // e.g. "[UI: Discord channel-logs]"
-  if (!logsUiRef) return null;
-  return resolveChannelId(logsUiRef);
-}
-
-function buildLogBlock({ tag, actorId, actorLabel, text }) {
-  const separator = "---------------------------";
-  const safeTag = String(tag ?? "SYSTEM").toUpperCase();
-  const who = actorId ? `<@${String(actorId)}>` : "SYSTEM";
-  const label = actorLabel ? ` (${String(actorLabel)})` : "";
-  const middleLine = `[${safeTag}] ${who}${label} ${String(text ?? "").trim()}`.trim();
-  return `${separator}\n${middleLine}\n${separator}`;
-}
-
-async function appendLogEntry({ guildId, content }) {
-  try {
-    const gid = String(guildId ?? "");
-    const channelId = getLogsChannelIdFromGuildConfig();
-
-    if (!channelId) {
-      console.error("[LOGS] Missing logs channel mapping in config for env:", CORE_ENV, { guild_id: gid });
-      return { ok: false, reason: "missing_channel_id" };
-    }
-
-    const guild = await fetchEnvGuild().catch((e) => {
-      console.error("[LOGS] fetchEnvGuild failed", { guild_id: gid, channel_id: String(channelId) }, e);
-      return null;
-    });
-    if (!guild) return { ok: false, reason: "missing_guild" };
-
-    const ch = await guild.channels.fetch(String(channelId)).catch((e) => {
-      console.error("[LOGS] channels.fetch failed", { guild_id: gid, channel_id: String(channelId) }, e);
-      return null;
-    });
-
-    if (!ch || !ch.isTextBased()) {
-      console.error("[LOGS] logs channel not found or not text-based", {
-        guild_id: gid,
-        channel_id: String(channelId),
-      });
-      return { ok: false, reason: "not_text_channel" };
-    }
-
-    const msg = await ch.send({ content }).catch((e) => {
-      console.error("[LOGS] channel.send failed", { guild_id: gid, channel_id: String(channelId) }, e);
-      return null;
-    });
-
-    if (!msg) return { ok: false, reason: "send_failed" };
-    return { ok: true, message_id: String(msg.id), channel_id: String(channelId) };
-  } catch (e) {
-    console.error("[LOGS] appendLogEntry unexpected error", e);
-    return { ok: false, reason: "unexpected_error" };
-  }
-}
-
-/* =========================
    ACCESS POSTS
 ========================= */
 async function postWelcomeAccessPost() {
@@ -2536,7 +2435,7 @@ function leaderboardEmbed({ view, cache, viewerUserId }) {
     const rank = i + 1;
     const uid = String(r.user_id);
     const merits = Number(r.merits ?? 0);
-    lines.push(`${rank}. <@${uid}> — ${Number.isFinite(merits) ? merits : 0}`);
+    lines.push(`${rank}. <@${uid}> — ${Number.isFinite(merits) ? merits : 0} ¤`);
   }
 
   const yourRank = leaderboardRankFromRows(rows, viewerUserId);
@@ -2552,8 +2451,8 @@ function leaderboardEmbed({ view, cache, viewerUserId }) {
     : "—";
 
   const dossier = isCycle
-    ? `Current Cycle: ${yourMerits} (Rank ${yourRank ?? "—"})\nAll Time: ${otherMerits} (Rank ${otherRank ?? "—"})\nCycle window: ${cycleLabel}`
-    : `All Time: ${yourMerits} (Rank ${yourRank ?? "—"})\nCurrent Cycle: ${otherMerits} (Rank ${otherRank ?? "—"})\nCycle window: ${cycleLabel}`;
+    ? `Current Cycle: ${yourMerits} ¤ (Rank ${yourRank ?? "—"})\nAll Time: ${otherMerits} ¤ (Rank ${otherRank ?? "—"})\nCycle window: ${cycleLabel}`
+    : `All Time: ${yourMerits} ¤ (Rank ${yourRank ?? "—"})\nCurrent Cycle: ${otherMerits} ¤ (Rank ${otherRank ?? "—"})\nCycle window: ${cycleLabel}`;
 
   const listText = lines.length ? lines.join("\n") : "No data yet.";
 
@@ -2740,17 +2639,6 @@ async function handleTerminalEvtCheckIn(interaction) {
     roleAssignErr = e;
   }
 
-
-  // LOGS (append-only) — terminal event check-in
-  await appendLogEntry({
-    guildId: interaction.guildId,
-    content: buildLogBlock({
-      tag: "EVENT",
-      actorId: interaction.user.id,
-      actorLabel: "User",
-      text: `checked in via Terminal for Event: ${evt?.name ?? "unknown"} (event_id: ${String(evt?.id ?? "unknown")}, merits: ${String(evt?.merits_awarded ?? 0)}, first_time: ${inserted ? "yes" : "no"})`,
-    }),
-  });
   // DM text (rate-limited)
   if (canSendDm(interaction.user.id, "evt_checkin", 5000)) {
     const tmpl = getRender("[UI: Terminal-events-check-in DM text]")?.text ?? "You have checked-in to *Event name + ID*.";
@@ -3819,16 +3707,6 @@ async function handleObjectiveSchedulingDeleteConfirm(interaction) {
 
   try {
     await dbSoftDeleteObjective(interaction.guildId, cur.id);
-    // LOGS (append-only)
-    await appendLogEntry({
-      guildId: interaction.guildId,
-      content: buildLogBlock({
-        tag: "OBJECTIVE",
-        actorId: interaction.user.id,
-        actorLabel: "Operator",
-        text: `deleted Objective: **${String(cur?.name ?? "Objective")}** (ID: ${Number(cur.id)})`,
-      }),
-    });
   } catch (e) {
     console.error("Delete objective failed:", e);
   }
@@ -3887,16 +3765,6 @@ async function handleEventSchedulingDeleteConfirm(interaction) {
 
   try {
     await dbSoftDeleteEvent(interaction.guildId, cur.id);
-    // LOGS (append-only)
-    await appendLogEntry({
-      guildId: interaction.guildId,
-      content: buildLogBlock({
-        tag: "EVENT",
-        actorId: interaction.user.id,
-        actorLabel: "Operator",
-        text: `deleted Event: **${String(cur?.name ?? "Event")}** (ID: ${Number(cur.id)})`,
-      }),
-    });
   } catch (e) {
     console.error("Delete event failed:", e);
   }
@@ -4281,18 +4149,6 @@ async function handleObjectiveSchedulingEditSubmit(interaction) {
   }
 
   clearEditDraft(interaction.guildId, interaction.user.id, objectiveId);
-
-  // LOGS (append-only)
-  await appendLogEntry({
-    guildId: interaction.guildId,
-    content: buildLogBlock({
-      tag: "OBJECTIVE",
-      actorId: interaction.user.id,
-      actorLabel: "Operator",
-      text: `edited Objective (ID: ${objectiveId})`,
-    }),
-  });
-
 
   // REQUIRED: return to same objective in scheduling list
   const st = ensureObjectiveSchedulingState(interaction.guildId, interaction.user.id);
@@ -5046,18 +4902,6 @@ async function handleEventSchedulingEditSubmit(interaction) {
   const key = eventEditDraftKey(interaction.guildId, interaction.user.id, eventId);
   eventEditDrafts.delete(key);
 
-  // LOGS (append-only)
-  await appendLogEntry({
-    guildId: interaction.guildId,
-    content: buildLogBlock({
-      tag: "EVENT",
-      actorId: interaction.user.id,
-      actorLabel: "Operator",
-      text: `edited Event (ID: ${eventId})`,
-    }),
-  });
-
-
   // Return to scheduling list (fresh cache)
   return await handleEventSchedulingOpen(interaction);
 }
@@ -5222,18 +5066,6 @@ async function handleOpRollCallInitiate(interaction) {
     resolvedChannelId: channelId,
     messageId: msg.id,
   });
-
-  // LOGS (append-only)
-  await appendLogEntry({
-    guildId: interaction.guildId,
-    content: buildLogBlock({
-      tag: "COMMAND",
-      actorId: interaction.user.id,
-      actorLabel: "Operator",
-      text: `initiated Roll Call in <#${String(channelId)}> (message_id: ${String(msg.id)})`,
-    }),
-  });
-
 
   d.target_channel_key = null;
   d.resolved_channel_id = null;
@@ -5607,18 +5439,6 @@ async function handleOpMeritTransferSubmit(interaction) {
 
   await dbSetMeritTransferReviewMessage({ guildId, id: reqId, reviewMessageId: msg.id });
 
-  // LOGS (append-only)
-  await appendLogEntry({
-    guildId,
-    content: buildLogBlock({
-      tag: "MERITS",
-      actorId: operatorUserId,
-      actorLabel: "Operator",
-      text: `initiated Merit Transfer (Request ID: ${reqId}) — Amount: ${Number(d.amount)} to <@${targetId}> (pending LT review)`,
-    }),
-  });
-
-
   // clear draft
   d.target_user_id = null;
   d.amount = null;
@@ -5659,21 +5479,6 @@ async function handleMeritTransferReviewDecision(interaction, decision) {
       // ignore DM failures
     }
   }
-
-  // LOGS (append-only)
-  await appendLogEntry({
-    guildId,
-    content: buildLogBlock({
-      tag: "MERITS",
-      actorId: interaction.user.id,
-      actorLabel: "LT",
-      text:
-        status === "approved"
-          ? `approved Merit Transfer (Request ID: ${req.id}) — ${Number(req.amount)} to <@${req.target_user_id}> (new total: ${afterMerits})`
-          : `denied Merit Transfer (Request ID: ${req.id}) — ${Number(req.amount)} to <@${req.target_user_id}>`,
-    }),
-  });
-
 
   const decidedText =
     status === "approved"
@@ -5742,24 +5547,13 @@ async function handleOpAnnouncementInitiate(interaction) {
     components: [row],
   });
 
-  const annReqId = await dbInsertAnnouncementRequest({
+  await dbInsertAnnouncementRequest({
     guildId: interaction.guildId,
     operatorUserId: interaction.user.id,
     audioUrl: d.audio_url,
     audioName: d.audio_name ?? "announcement.mp3",
     reviewChannelId: reviewChannelId,
     reviewMessageId: msg.id,
-  });
-
-  // LOGS (append-only)
-  await appendLogEntry({
-    guildId: interaction.guildId,
-    content: buildLogBlock({
-      tag: "COMMAND",
-      actorId: interaction.user.id,
-      actorLabel: "Operator",
-      text: `initiated Announcement for LT review (request_id: ${String(annReqId)}, review_message_id: ${String(msg.id)})`,
-    }),
   });
 
   // clear draft
@@ -5791,17 +5585,6 @@ async function handleAnnouncementReviewDecision(interaction, decision) {
 
   const status = decision === "approve" ? "approved" : "denied";
   await dbUpdateAnnouncementDecision({ id: req.id, guildId, status, decidedByUserId: interaction.user.id });
-
-  // LOGS (append-only)
-  await appendLogEntry({
-    guildId,
-    content: buildLogBlock({
-      tag: "COMMAND",
-      actorId: interaction.user.id,
-      actorLabel: "LT",
-      text: `${status} Announcement (request_id: ${String(req.id)}, operator: <@${String(req.operator_user_id)}>, review_message_id: ${String(msgId)})`,
-    }),
-  });
 
   // update review message
   try {
@@ -5986,18 +5769,7 @@ async function handleEventUploadSubmit(interaction) {
     return;
   }
 
-  
-  // LOGS (append-only)
-  await appendLogEntry({
-    guildId: interaction.guildId,
-    content: buildLogBlock({
-      tag: "EVENT",
-      actorId: interaction.user.id,
-      actorLabel: "Operator",
-      text: `uploaded Event: **${String(d.name)}** (ID: ${eventId}, Merits: ${Number(d.merits)}, RoleKey: ${String(d.check_in_role_key)})`,
-    }),
-  });
-const savedName = d.name;
+  const savedName = d.name;
   s.eventDraft = {
     name: null,
     merits: null,
@@ -6410,17 +6182,6 @@ async function handleObjectiveSubmit(interaction) {
     return;
   }
 
-  // LOGS (append-only)
-  await appendLogEntry({
-    guildId: interaction.guildId,
-    content: buildLogBlock({
-      tag: "OBJECTIVE",
-      actorId: interaction.user.id,
-      actorLabel: "Operator",
-      text: `uploaded Objective: **${String(s.draft.name)}** (ID: ${objectiveId}, Merits: ${Number(s.draft.merits)}, Proof: ${String(s.draft.file_type)})`,
-    }),
-  });
-
   const savedName = s.draft.name;
   clearDraft(s);
 
@@ -6513,17 +6274,6 @@ if (!message.channel || !message.channel.isDMBased?.()) return;
       proofUrl: null,
       proofText: content,
     });
-    // LOGS (append-only)
-    await appendLogEntry({
-      guildId: envGuildId(),
-      content: buildLogBlock({
-        tag: "OBJECTIVE",
-        actorId: message.author.id,
-        actorLabel: null,
-        text: `submitted Objective proof (Objective ID: ${Number(sess.objectiveId)}, Submission ID: ${Number(submissionId)})`,
-      }),
-    });
-
 
     return;
   }
@@ -6585,17 +6335,6 @@ if (!message.channel || !message.channel.isDMBased?.()) return;
     submissionId,
     proofUrl: storedUrl,
     proofText: null,
-  });
-
-  // LOGS (append-only)
-  await appendLogEntry({
-    guildId: envGuildId(),
-    content: buildLogBlock({
-      tag: "OBJECTIVE",
-      actorId: message.author.id,
-      actorLabel: null,
-      text: `submitted Objective proof (Objective ID: ${Number(sess.objectiveId)}, Submission ID: ${Number(submissionId)})`,
-    }),
   });
 
   return;
@@ -7115,18 +6854,6 @@ async function handleObjectiveReviewApprove(interaction) {
     } catch (_) {}
     return;
   }
-  // LOGS (append-only)
-  await appendLogEntry({
-    guildId: interaction.guildId,
-    content: buildLogBlock({
-      tag: "OBJECTIVE",
-      actorId: interaction.user.id,
-      actorLabel: "Operator",
-      text: `accepted Objective submission — <@${String(sub.submitted_by_user_id)}> (Objective ID: ${Number(sub.objective_id)}, +${Number(sub.objective_merits_awarded)} Merits)`,
-    }),
-  });
-
-
 
   
   // DM submitter (approved)
@@ -7188,19 +6915,7 @@ async function handleObjectiveReviewDeny(interaction) {
   }
 
   
-  
-  // LOGS (append-only)
-  await appendLogEntry({
-    guildId: interaction.guildId,
-    content: buildLogBlock({
-      tag: "OBJECTIVE",
-      actorId: interaction.user.id,
-      actorLabel: "Operator",
-      text: `denied Objective submission — <@${String(sub.submitted_by_user_id)}> (Objective ID: ${Number(sub.objective_id)})`,
-    }),
-  });
-
-// DM submitter (denied)
+  // DM submitter (denied)
   try {
     const user = await client.users.fetch(String(sub.submitted_by_user_id));
     const obj = await dbGetObjectiveWithGifs(interaction.guildId, sub.objective_id).catch(() => null);
@@ -7277,18 +6992,6 @@ async function handleObjectiveReviewUndo(interaction) {
     } catch (_) {}
     return;
   }
-
-  // LOGS (append-only)
-  await appendLogEntry({
-    guildId: interaction.guildId,
-    content: buildLogBlock({
-      tag: "OBJECTIVE",
-      actorId: interaction.user.id,
-      actorLabel: "Operator",
-      text: `undid Objective decision — <@${String(sub.submitted_by_user_id)}> (Objective ID: ${Number(sub.objective_id)})`,
-    }),
-  });
-
 
   await updateObjectiveReviewMessage(interaction, { status: "undone", reviewerUserId: interaction.user.id });
 }
@@ -7708,18 +7411,6 @@ async function handleLtAdjustAddSubmit(interaction) {
 
   console.log("[LT_ADJUST_MERITS]", { guild_id: guildId, lt_user_id: ltUserId, target_user_id: d.target_user_id, mode: "add", amount });
 
-  // LOGS (append-only)
-  await appendLogEntry({
-    guildId,
-    content: buildLogBlock({
-      tag: "MERITS",
-      actorId: ltUserId,
-      actorLabel: "LT",
-      text: `adjusted Merits (ADD) — ${amount} to <@${String(d.target_user_id)}>`,
-    }),
-  });
-
-
 
   invalidateLeaderboardCache(guildId);
   // Notify recipient (best-effort; ignore if DMs closed)
@@ -7767,18 +7458,6 @@ async function handleLtAdjustDeductSubmit(interaction) {
   );
 
   console.log("[LT_ADJUST_MERITS]", { guild_id: guildId, lt_user_id: ltUserId, target_user_id: d.target_user_id, mode: "deduct", amount });
-
-  // LOGS (append-only)
-  await appendLogEntry({
-    guildId,
-    content: buildLogBlock({
-      tag: "MERITS",
-      actorId: ltUserId,
-      actorLabel: "LT",
-      text: `adjusted Merits (DEDUCT) — ${amount} from <@${String(d.target_user_id)}>`,
-    }),
-  });
-
 
 
   invalidateLeaderboardCache(guildId);
@@ -7978,18 +7657,6 @@ async function handleLtSuspendSubmit(interaction) {
 
 console.log("[LT_SUSPEND_USER]", { guild_id: guildId, lt_user_id: ltUserId, target_user_id: d.target_user_id, duration_key: d.duration_key });
 
-  // LOGS (append-only)
-  await appendLogEntry({
-    guildId,
-    content: buildLogBlock({
-      tag: "SYSTEM",
-      actorId: ltUserId,
-      actorLabel: "LT",
-      text: `started Suspension — <@${String(d.target_user_id)}> (Duration: ${String(d.duration_key)})`,
-    }),
-  });
-
-
   s.ltDraft.suspend_user = { target_user_id: null, duration_key: null };
   s.screen = "lt_menu";
   await editEphemeral(interaction, ltMenuEmbed(), ltMenuComponents());
@@ -8041,18 +7708,6 @@ async function runSuspendLiftCheck() {
       role_id_snapshot: roleId,
       suspension_id: suspensionId,
     });
-
-    // LOGS (append-only)
-    await appendLogEntry({
-      guildId,
-      content: buildLogBlock({
-        tag: "SYSTEM",
-        actorId: null,
-        actorLabel: null,
-        text: `ended Suspension — <@${String(targetUserId)}> (Suspension ID: ${Number(suspensionId)})`,
-      }),
-    });
-
   }
 }
 
@@ -9517,17 +9172,6 @@ client.on(Events.MessageReactionAdd, async (reaction, user) => {
 
     await dbInsertRollCallAward(open.id, guildId, user.id);
     await dbAddUserMerits({ guildId, userId: user.id, delta: merits });
-
-    // LOGS (append-only) — roll call attendance (✅ reaction)
-    await appendLogEntry({
-      guildId,
-      content: buildLogBlock({
-        tag: "EVENT",
-        actorId: user.id,
-        actorLabel: "User",
-        text: `confirmed attendance via ✅ Roll Call for Event: ${activeEvent?.name ?? "unknown"} (event_id: ${String(activeEvent?.id ?? "unknown")}, merits: ${String(merits)}, roll_call_id: ${String(open.id)})`,
-      }),
-    });
 
     // Best-effort DM confirmation (do not fail the award if DM fails)
     try {
