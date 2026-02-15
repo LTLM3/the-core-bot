@@ -1,0 +1,322 @@
+{
+  "meta": {
+    "name": "core-bot",
+    "config_version": "3.0",
+    "generated_at_utc": "2026-01-29T13:36:06Z",
+    "notes": [
+      "This file is runtime config (safe to commit). Secrets should be provided via environment variables or a secrets manager.",
+      "Values marked ${ENV:VAR_NAME} are resolved from env at startup."
+    ]
+  },
+  "runtime": {
+    "environment": {
+      "mode": "${ENV:CORE_ENV}",
+      "timezone_default": "America/Los_Angeles",
+      "log_level": "${ENV:LOG_LEVEL}"
+    },
+    "server": {
+      "http": {
+        "enabled": true,
+        "host": "${ENV:HTTP_HOST}",
+        "port": "${ENV:HTTP_PORT}",
+        "public_base_url": "${ENV:PUBLIC_BASE_URL}"
+      },
+      "worker": {
+        "concurrency": 5
+      }
+    }
+  },
+  "discord": {
+    "token": "${ENV:DISCORD_BOT_TOKEN}",
+    "application_id": "${ENV:DISCORD_APPLICATION_ID}",
+    "intents": {
+      "guilds": true,
+      "guild_members": true,
+      "guild_message_reactions": true,
+      "direct_messages": true
+    },
+    "guilds": {
+      "production": {
+        "guild_id": "321886391619420162",
+        "channels": {
+          "welcome": "[UI: Discord channel-welcome]",
+          "terminal": "[UI: Discord channel-terminal]",
+          "operator_terminal": "[UI: Discord channel-operator-terminal]",
+          "lt_terminal": "[UI: Discord channel-lt-terminal]",
+          "leaderboard": "[UI: Discord channel-leaderboard]",
+          "logs": "[UI: Discord channel-logs]",
+          "objective_submissions": "[UI: Discord channel-Objective Submissions]",
+          "lt_command_reviews": "[UI: Discord channel-LT Command Reviews]"
+        },
+        "roles": {
+          "the_core": "[UI: Discord Role The Core]",
+          "the_core_signal": "[UI: Discord Role The Core Signal]",
+          "operator": "[UI: Discord role Operator]",
+          "event_checked_in": {
+            "EVENT_1_CHECKED_IN": "[UI: Discord Role Event 1 Checked In]",
+            "EVENT_2_CHECKED_IN": "[UI: Discord Role Event 2 Checked In]",
+            "EVENT_3_CHECKED_IN": "[UI: Discord Role Event 3 Checked In]",
+            "EVENT_4_CHECKED_IN": "[UI: Discord Role Event 4 Checked In]",
+            "EVENT_5_CHECKED_IN": "[UI: Discord Role Event 5 Checked In]"
+          },
+          "suspended": {
+            "SUSPENDED_12_HOURS": "[UI: Discord role Dishonourably Discharged 12 Hours]",
+            "SUSPENDED_1_DAY": "[UI: Discord role Dishonourably Discharged 1 Day]",
+            "SUSPENDED_3_DAYS": "[UI: Discord role Dishonourably Discharged 3 Days]",
+            "SUSPENDED_1_WEEK": "[UI: Discord role Dishonourably Discharged 1 Week]",
+            "SUSPENDED_2_WEEKS": "[UI: Discord role Dishonourably Discharged 2 Weeks]"
+          }
+        },
+        "event_channels": {
+          "EVENT_CHANNEL_1": "[UI: Discord channel-Event Channel 1]",
+          "EVENT_CHANNEL_2": "[UI: Discord channel-Event Channel 2]",
+          "EVENT_CHANNEL_3": "[UI: Discord channel-Event Channel 3]",
+          "EVENT_CHANNEL_4": "[UI: Discord channel-Event Channel 4]",
+          "EVENT_CHANNEL_5": "[UI: Discord channel-Event Channel 5]"
+        }
+      },
+      "testing": {
+        "guild_id": "1450402589534453762",
+        "channels": {
+          "welcome": "[UI: Discord channel-welcome]",
+          "terminal": "[UI: Discord channel-terminal]",
+          "operator_terminal": "[UI: Discord channel-operator-terminal]",
+          "lt_terminal": "[UI: Discord channel-lt-terminal]",
+          "leaderboard": "[UI: Discord channel-leaderboard]",
+          "logs": "[UI: Discord channel-logs]",
+          "objective_submissions": "[UI: Discord channel-Objective Submissions]",
+          "lt_command_reviews": "[UI: Discord channel-LT Command Reviews]"
+        },
+        "roles": {
+          "the_core": "[UI: Discord Role The Core]",
+          "the_core_signal": "[UI: Discord Role The Core Signal]",
+          "operator": "[UI: Discord role Operator]",
+          "event_checked_in": {
+            "EVENT_1_CHECKED_IN": "[UI: Discord Role Event 1 Checked In]",
+            "EVENT_2_CHECKED_IN": "[UI: Discord Role Event 2 Checked In]",
+            "EVENT_3_CHECKED_IN": "[UI: Discord Role Event 3 Checked In]",
+            "EVENT_4_CHECKED_IN": "[UI: Discord Role Event 4 Checked In]",
+            "EVENT_5_CHECKED_IN": "[UI: Discord Role Event 5 Checked In]"
+          },
+          "suspended": {
+            "SUSPENDED_12_HOURS": "[UI: Discord role Dishonourably Discharged 12 Hours]",
+            "SUSPENDED_1_DAY": "[UI: Discord role Dishonourably Discharged 1 Day]",
+            "SUSPENDED_3_DAYS": "[UI: Discord role Dishonourably Discharged 3 Days]",
+            "SUSPENDED_1_WEEK": "[UI: Discord role Dishonourably Discharged 1 Week]",
+            "SUSPENDED_2_WEEKS": "[UI: Discord role Dishonourably Discharged 2 Weeks]"
+          }
+        },
+        "event_channels": {
+          "EVENT_CHANNEL_1": "[UI: Discord channel-Event Channel 1]",
+          "EVENT_CHANNEL_2": "[UI: Discord channel-Event Channel 2]",
+          "EVENT_CHANNEL_3": "[UI: Discord channel-Event Channel 3]",
+          "EVENT_CHANNEL_4": "[UI: Discord channel-Event Channel 4]",
+          "EVENT_CHANNEL_5": "[UI: Discord channel-Event Channel 5]"
+        }
+      }
+    },
+    "permanent_posts": {
+      "setup_mode": "replace",
+      "posts": [
+        {
+          "post_key": "welcome_access_post",
+          "components": [
+            "[UI: Welcome-video]",
+            "[UI: Initiation-text-1]",
+            "[UI: Initiation-button-1]"
+          ],
+          "channel_ui": "[UI: Discord channel-welcome]"
+        },
+        {
+          "post_key": "terminal_access_post",
+          "components": [
+            "[UI: Terminal-access text]",
+            "[UI: Terminal-access-button]"
+          ],
+          "channel_ui": "[UI: Discord channel-terminal]"
+        },
+        {
+          "post_key": "operator_terminal_access_post",
+          "components": [
+            "[UI: Operator-Terminal-access text]",
+            "[UI: Operator-Terminal-access-button]"
+          ],
+          "channel_ui": "[UI: Discord channel-operator-terminal]"
+        },
+        {
+          "post_key": "lt_terminal_access_post",
+          "components": [
+            "[UI: LT-Terminal-access text]",
+            "[UI: LT-Terminal-access-button]"
+          ],
+          "channel_ui": "[UI: Discord channel-lt-terminal]"
+        },
+        {
+          "post_key": "leaderboard_access_post",
+          "components": [
+            "[UI: Leaderboard-access text]",
+            "[UI: Leaderboard-access-button]"
+          ],
+          "channel_ui": "[UI: Discord channel-leaderboard]"
+        }
+      ]
+    },
+    "admin_setup_commands": {
+      "prod_command": {
+        "name": "prod_core",
+        "subcommands": [
+          "setup",
+          "reset"
+        ]
+      },
+      "test_command": {
+        "name": "test_core",
+        "subcommands": [
+          "setup",
+          "reset"
+        ]
+      },
+      "allowed_channel_ui": "[UI: Discord channel-lt-terminal]"
+    }
+  },
+  "database": {
+    "primary": {
+      "type": "mysql",
+      "mysql": {
+        "host": "${ENV:MYSQL_HOST}",
+        "port": "${ENV:MYSQL_PORT}",
+        "database": "${ENV:MYSQL_DATABASE}",
+        "user": "${ENV:MYSQL_USER}",
+        "password": "${ENV:MYSQL_PASSWORD}",
+        "ssl": "${ENV:MYSQL_SSL}"
+      },
+      "pool": {
+        "min": "${ENV:MYSQL_POOL_MIN}",
+        "max": "${ENV:MYSQL_POOL_MAX}",
+        "idle_timeout_seconds": "${ENV:MYSQL_POOL_IDLE_TIMEOUT_SECONDS}"
+      },
+      "migrations": {
+        "enabled": true,
+        "table": "schema_migrations"
+      }
+    }
+  },
+  "storage": {
+    "uploads": {
+      "provider": "${ENV:STORAGE_PROVIDER}",
+      "bucket": "${ENV:S3_BUCKET}",
+      "region": "${ENV:S3_REGION}",
+      "endpoint": "${ENV:S3_ENDPOINT}",
+      "access_key_id": "${ENV:S3_ACCESS_KEY_ID}",
+      "secret_access_key": "${ENV:S3_SECRET_ACCESS_KEY}",
+      "public_url_base": "${ENV:S3_PUBLIC_BASE_URL}",
+      "limits": {
+        "objective_proof_max_bytes": "${ENV:OBJECTIVE_PROOF_MAX_BYTES}",
+        "file_attach_timeout_seconds": "${ENV:FILE_ATTACH_TIMEOUT_SECONDS}"
+      }
+    }
+  },
+  "cache": {
+    "provider": "redis",
+    "redis": {
+      "routing": {
+        "mode": "by_guild",
+        "production_guild_id": "321886391619420162",
+        "testing_guild_id": "1450402589534453762"
+      },
+      "production": {
+        "url": "${ENV:REDIS_URL_PROD}"
+      },
+      "testing": {
+        "url": "${ENV:REDIS_URL_TEST}"
+      }
+    }
+  },
+  "jobs": {
+    "provider": "inline",
+    "queue": {
+      "name": "default"
+    }
+  },
+  "cycles": {
+    "cycle90": {
+      "timezone": "America/Los_Angeles",
+      "reset_time_local": "23:59:00",
+      "duration_days": 90,
+      "environments": {
+        "production": {
+          "start_at_local": "2026-02-16T00:00:00"
+        },
+        "testing": {
+          "start_at_local": "2026-02-02T00:00:00",
+          "duration_days_override": 1
+        }
+      }
+    }
+  },
+  "rate_limits": {
+    "dm_cooldown_seconds": 5,
+    "interaction_ack_deadline_seconds": 3
+  },
+  "timers": {
+    "objective_submission_timeout_minutes": 10,
+    "roll_call_close_after_minutes": 60,
+    "transitional_gif_default_loops": {
+      "initiation_intro": 3,
+      "terminal_boot": 3
+    },
+    "draft_ttl_hours": 24
+  },
+  "leaderboard": {
+    "cache_refresh_minutes": 120,
+    "top_n": 25,
+    "announcement_top_n": 3,
+    "announcement_auto_delete_hours": 24
+  },
+  "observability": {
+    "sentry": {
+      "enabled": false,
+      "dsn": null
+    },
+    "metrics": {
+      "enabled": false,
+      "prometheus_port": null
+    }
+  },
+  "feature_flags": {
+    "enable_year_in_review": true,
+    "enable_roll_call": true,
+    "enable_announcements": true,
+    "enable_merit_transfers": true
+  },
+"gif_durations_seconds": {
+  "[UI: Initiation-transitional GIF-1]": 2.05,
+  "[UI: Initiation-screen-charter GIF]": 1.12,
+  "[UI: Initiation-transitional GIF-2]": 1.12,
+  "[UI: Initiation-transitional GIF-2-back]": 1.12,
+  "[UI: Initiation-screen-introduction GIF]": 1.12,
+  "[UI: Initiation-transitional GIF-3]": 1.12,
+  "[UI: Initiation-transitional GIF-3-back]": 1.12,
+  "[UI: Initiation-screen-comms opt in GIF]": 1.12,
+  "[UI: Initiation-transitional GIF-4]": 1.12,
+  "[UI: Initiation-transitional GIF-4-no]": 1.12,
+  "[UI: Initiation-screen-congratulations GIF]": 3.14,
+
+  "[UI: Terminal-transitional GIF-1]": 2.05,
+  "[UI: Terminal-main menu-GIF]": 1.12,
+  "[UI: Terminal-transitional GIF-objectives]": 1.12,
+  "[UI: Terminal-objectives-GIF-*objective name*-main]": 1.12,
+  "[UI: Terminal-transitional GIF-objectives-*objective name*-submit]": 1.12,
+  "[UI: Terminal-transitional GIF-objectives-*objective name*-back]": 1.12,
+  "[UI: Terminal-objectives-GIF-submit]": 1.12,
+  "[UI: Terminal-transitional GIF-objectives-submit-back]": 1.12,
+  "[UI: Terminal-transitional GIF-objectives-submit-try-again]": 1.12,
+  "[UI: Terminal-transitional GIF-events]": 1.12,
+  "[UI: Terminal-events-GIF-*event name*-main]": 1.12,
+  "[UI: Terminal-transitional GIF-events-*event name*-check-in]": 1.12,
+  "[UI: Terminal-transitional GIF-events-*event name*-back]": 1.12,
+  "[UI: Terminal-events-check-in GIF]": 1.12,
+  "[UI: Terminal-transitional GIF-events-check-in-back]": 1.12,
+  "[UI: Terminal-transitional GIF-events-check-in-try-again]": 1.12
+ }
+}
