@@ -245,7 +245,7 @@
       "duration_days": 90,
       "environments": {
         "production": {
-          "start_at_local": "2026-02-16T00:00:00"
+          "start_at_local": "2026-02-23T00:00:00"
         },
         "testing": {
           "start_at_local": "2026-02-02T00:00:00",
